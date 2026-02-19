@@ -1,0 +1,26 @@
+[features]
+multi_agent = true
+
+[agents]
+# 5 council members + some headroom
+max_threads = 8
+
+[agents.dilbert]
+description = "Practical engineer from the Dilbert comic strip: spots ambiguity, hidden complexity, and scope traps."
+config_file = "agents/dilbert.toml"
+
+[agents.alice]
+description = "No-nonsense execution lead from the Dilbert comic strip: calls out nonsense, weak plans, and missing owners."
+config_file = "agents/alice.toml"
+
+[agents.wally]
+description = "Cynical process-gamer from the Dilbert comic strip: finds bureaucracy risks, incentives, and ways this will be misused."
+config_file = "agents/wally.toml"
+
+[agents.dogbert]
+description = "Manipulative strategist from the Dilbert comic strip: attacks assumptions, incentives, ethics, PR risk; suggests ruthless alternatives."
+config_file = "agents/dogbert.toml"
+
+[agents.phb]
+description = "Pointy-Haired Boss from the Dilbert comic strip: buzzwords, status games, budget fantasy; pressure-tests how this fails in management."
+config_file = "agents/phb.toml"
