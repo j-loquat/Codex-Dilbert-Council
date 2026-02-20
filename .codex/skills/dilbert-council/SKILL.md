@@ -150,6 +150,43 @@ Paste each agent output verbatim under labels.
 ## Sources
 Include only when web research was used.
 
+## Step 6: Optional HTML Export (Offer After Report)
+After you present the Council Report, offer this:
+
+`Want me to generate a styled HTML version in your current folder?`
+
+If user says yes:
+1. Use the template at:
+   - `assets/templates/dilbert-council-report-template.html`
+2. Write output to the user's current working directory as:
+   - `dilbert_council_report.html`
+3. Populate placeholders in the template with the just-generated report content.
+4. Keep image references pointed at the skill asset folder via `{{IMAGE_BASE}}` replacement.
+   - Default replacement: `.codex/skills/dilbert-council/assets/images`
+   - Characters required: `Dilbert.png`, `Alice.png`, `Wally.png`, `Dogbert.png`, `PHB.png`
+   - Logo required: `dilbert-logo-small.png`
+
+### HTML export requirements (must follow)
+- Preserve template styling and layout.
+- Preserve existing character image sizing from template:
+  - Appendix/rebuttal avatars are already set to 50% size in template CSS.
+  - Matrix character icons are intentionally unscaled (small source images).
+- For risk/stance labels:
+  - Use bold + color classes (`rating-green`, `rating-yellow`, `rating-red`) instead of markdown emphasis.
+- Convert markdown in memo/rebuttal blocks to readable HTML:
+  - The template includes built-in markdown-to-HTML conversion for `pre.memo-text`.
+  - Do not remove or bypass this script.
+- Ensure all inserted report content is HTML-safe:
+  - Escape `<`, `>`, and `&` in placeholder text where appropriate.
+- Keep memos/rebuttals verbatim in their placeholder fields (`{{*_MEMO_MD}}`, `{{*_REBUTTAL_MD}}`).
+
+### Placeholder population notes
+- Fill summary section placeholders with HTML list items (for example `<li>...</li>`).
+- Fill matrix rows with `<tr>...</tr>` HTML and character image cells.
+- Fill memo and rebuttal placeholders with raw markdown text; template JS renders headings/bold/lists.
+- Fill `{{TRAFFIC_LIGHT_CLASS}}` with one of:
+  - `rating-green`, `rating-yellow`, `rating-red`
+
 ## Quality Bar
 Meet all checks before finalizing:
 - Distinct voices are obvious in one paragraph each.

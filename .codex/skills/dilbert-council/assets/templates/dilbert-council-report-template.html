@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{DOC_TITLE}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --manilla-base: #e8dbc3;
+      --manilla-dark: #d4c4a8;
+      --carbon-blue: #1e2a4a;
+      --line: rgba(30, 42, 74, 0.16);
+      --paper: #fffef9;
+      --warn: #a16207;
+      --red: #b91c1c;
+      --ink-soft: #334263;
+      --highlight: rgba(254, 240, 138, 0.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #2f2f2f;
+      background-image: radial-gradient(#3e3e3e 1px, transparent 1px);
+      background-size: 20px 20px;
+      min-height: 100vh;
+      font-family: "Public Sans", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      color: var(--carbon-blue);
+    }
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.05;
+      z-index: 9999;
+    }
+    .folder-container {
+      position: relative;
+      width: 100%;
+      max-width: 1080px;
+      background: var(--manilla-base);
+      box-shadow: 20px 20px 60px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(0,0,0,0.1);
+      border-radius: 2px 40px 2px 2px;
+      padding: 58px 50px 28px;
+      transform: rotate(-0.45deg);
+      overflow: hidden;
+      animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .folder-tab {
+      position: absolute;
+      top: -30px;
+      left: 50px;
+      width: 270px;
+      height: 40px;
+      background: var(--manilla-base);
+      clip-path: polygon(0% 100%, 15% 0%, 85% 0%, 100% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(0,0,0,0.35);
+    }
+    .staple {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 40px;
+      height: 6px;
+      background: #a8a8a8;
+      border-radius: 2px;
+      transform: rotate(-35deg);
+      box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .sheet {
+      background: var(--paper);
+      padding: 34px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      position: relative;
+      border-bottom: 2px dashed #ddd;
+    }
+    .sheet::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: 0;
+      width: 100%;
+      height: 10px;
+      background: var(--paper);
+      clip-path: polygon(0% 100%, 2% 0%, 4% 100%, 6% 0%, 8% 100%, 10% 0%, 12% 100%, 14% 0%, 16% 100%, 18% 0%, 20% 100%, 22% 0%, 24% 100%, 26% 0%, 28% 100%, 30% 0%, 32% 100%, 34% 0%, 36% 100%, 38% 0%, 40% 100%, 42% 0%, 44% 100%, 46% 0%, 48% 100%, 50% 0%, 52% 100%, 54% 0%, 56% 100%, 58% 0%, 60% 100%, 62% 0%, 64% 100%, 66% 0%, 68% 100%, 70% 0%, 72% 100%, 74% 0%, 76% 100%, 78% 0%, 80% 100%, 82% 0%, 84% 100%, 86% 0%, 88% 100%, 90% 0%, 92% 100%, 94% 0%, 96% 100%, 98% 0%, 100% 100%);
+    }
+    header {
+      border-bottom: 3px double var(--carbon-blue);
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+    }
+    .doc-title {
+      font-size: clamp(1.7rem, 3.3vw, 2.5rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 0.92;
+      color: var(--carbon-blue);
+      text-shadow: 0.5px 0.5px 0 rgba(30, 42, 74, 0.4);
+    }
+    .meta {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.77rem;
+      text-align: right;
+      color: var(--ink-soft);
+      line-height: 1.45;
+    }
+    .stamp {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      border: 4px double var(--warn);
+      color: var(--warn);
+      font-size: 1.05rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      transform: rotate(-13deg);
+      opacity: 0.64;
+      padding: 4px 10px;
+      user-select: none;
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .tag {
+      border: 1px solid var(--carbon-blue);
+      background: #f9f5ed;
+      padding: 6px 10px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .section { margin-bottom: 26px; }
+    .section-label {
+      display: inline-block;
+      background: var(--carbon-blue);
+      color: #fff;
+      padding: 3px 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .mono {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.85rem;
+      line-height: 1.58;
+      color: var(--ink-soft);
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    ul { list-style: none; }
+    li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 8px;
+    }
+    li::before {
+      content: "▪";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--red);
+      font-size: 0.9em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      background: #fffdfa;
+      font-size: 0.85rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    th {
+      background: #f0e8da;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.72rem;
+    }
+    .matrix-avatar { display: block; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .risk {
+      border: 1px solid var(--line);
+      background: #fffdfa;
+      padding: 10px 11px;
+      margin-bottom: 10px;
+    }
+    .risk strong {
+      background: var(--highlight);
+      padding: 0 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .memo-card {
+      display: grid;
+      grid-template-columns: 46px 1fr;
+      gap: 12px;
+      border: 1px solid var(--line);
+      background: #fffdfa;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .memo-avatar {
+      width: 39px;
+      height: 39px;
+      object-fit: contain;
+      object-position: left center;
+    }
+    details summary {
+      cursor: pointer;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--carbon-blue);
+    }
+    .memo-text {
+      white-space: pre-wrap;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.74rem;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      border: 1px dashed var(--line);
+      background: #fff;
+      padding: 10px;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .markdown-view {
+      white-space: normal;
+      font-size: 0.77rem;
+      line-height: 1.55;
+    }
+    .markdown-view h3,
+    .markdown-view h4,
+    .markdown-view h5 {
+      margin: 8px 0 7px;
+      color: var(--carbon-blue);
+      line-height: 1.2;
+    }
+    .markdown-view h4 { font-size: 0.9rem; }
+    .markdown-view h5 { font-size: 0.84rem; }
+    .markdown-view p { margin: 0 0 8px; }
+    .markdown-view ul { margin: 0 0 8px; padding-left: 0; }
+    .markdown-view li { margin-bottom: 5px; }
+    .rating-yellow { color: #a16207; font-weight: 700; }
+    .rating-red { color: #b91c1c; font-weight: 700; }
+    .rating-green { color: #156b3c; font-weight: 700; }
+    .footer-note {
+      margin-top: 18px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      color: var(--manilla-dark);
+      text-align: right;
+    }
+    code {
+      font-family: "IBM Plex Mono", monospace;
+      background: #f4efe4;
+      border: 1px solid var(--line);
+      padding: 1px 4px;
+      font-size: 0.78rem;
+    }
+    @media (max-width: 940px) {
+      .folder-container { padding: 46px 14px 20px; }
+      .sheet { padding: 24px 14px; }
+      .two-col { grid-template-columns: 1fr; }
+      .memo-card { grid-template-columns: 1fr; }
+      .memo-avatar { width: 32px; height: 32px; }
+    }
+    @keyframes slideIn {
+      from { transform: translateY(50px) rotate(-2deg); opacity: 0; }
+      to { transform: translateY(0) rotate(-0.45deg); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="noise-overlay" aria-hidden="true">
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain)"></rect>
+  </svg>
+  <main class="folder-container">
+    <div class="folder-tab">{{FILE_REF}}</div>
+    <div class="staple"></div>
+    <article class="sheet">
+      <div class="stamp">{{TRAFFIC_LIGHT_TEXT}}</div>
+      <header>
+        <div class="title-wrap">
+          <img class="logo" src="{{IMAGE_BASE}}/dilbert-logo-small.png" alt="Dilbert Council logo">
+          <h1 class="doc-title">{{REPORT_TITLE_LINE_1}}<br>{{REPORT_TITLE_LINE_2}}</h1>
+        </div>
+        <div class="meta">{{META_HTML}}</div>
+      </header>
+
+      <section class="tag-row">
+        <div class="tag">Traffic Light: <strong class="{{TRAFFIC_LIGHT_CLASS}}">{{TRAFFIC_LIGHT_TEXT}}</strong></div>
+        <div class="tag">Confidence: {{CONFIDENCE}}</div>
+        <div class="tag">Maturity: {{MATURITY_LEVEL}}</div>
+        <div class="tag">Directive: {{DIRECTIVE}}</div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Idea Snapshot</div>
+        <div class="two-col mono">
+          <ul>{{IDEA_SNAPSHOT_LEFT_HTML}}</ul>
+          <ul>{{IDEA_SNAPSHOT_RIGHT_HTML}}</ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Overall Verdict</div>
+        <ul class="mono">{{OVERALL_VERDICT_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Character Contrast Matrix</div>
+        <table class="mono">
+          <thead>
+            <tr>
+              <th>Character</th>
+              <th>Stance</th>
+              <th>Core Fear</th>
+              <th>Most Useful Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>{{MATRIX_ROWS_HTML}}</tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Consensus</div>
+        <div class="two-col mono">
+          <ul>{{CONSENSUS_LEFT_HTML}}</ul>
+          <ul>{{CONSENSUS_RIGHT_HTML}}</ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Productive Disagreements</div>
+        <ul class="mono">{{DISAGREEMENTS_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Top Risks (Ranked)</div>
+        {{TOP_RISKS_HTML}}
+      </section>
+
+      <section class="section">
+        <div class="section-label">What Not To Do</div>
+        <ul class="mono">{{WHAT_NOT_TO_DO_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">7-Day Minimum Viable Next Step</div>
+        <ul class="mono">{{NEXT_7_DAYS_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">30-Day De-Risk Plan</div>
+        <ul class="mono">{{NEXT_30_DAYS_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Decision Gates</div>
+        <div class="two-col mono">
+          <ul>{{DECISION_GATES_LEFT_HTML}}</ul>
+          <ul>{{DECISION_GATES_RIGHT_HTML}}</ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Questions For The User</div>
+        <ul class="mono">{{QUESTIONS_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Appendix: Individual Memos</div>
+        <article class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dilbert.png" alt="Dilbert">
+          <details open>
+            <summary>Dilbert - Primary Memo</summary>
+            <pre class="memo-text">{{DILBERT_MEMO_MD}}</pre>
+          </details>
+        </article>
+        <article class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Alice.png" alt="Alice">
+          <details>
+            <summary>Alice - Primary Memo</summary>
+            <pre class="memo-text">{{ALICE_MEMO_MD}}</pre>
+          </details>
+        </article>
+        <article class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Wally.png" alt="Wally">
+          <details>
+            <summary>Wally - Primary Memo</summary>
+            <pre class="memo-text">{{WALLY_MEMO_MD}}</pre>
+          </details>
+        </article>
+        <article class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dogbert.png" alt="Dogbert">
+          <details>
+            <summary>Dogbert - Primary Memo</summary>
+            <pre class="memo-text">{{DOGBERT_MEMO_MD}}</pre>
+          </details>
+        </article>
+        <article class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/PHB.png" alt="PHB">
+          <details>
+            <summary>PHB - Primary Memo</summary>
+            <pre class="memo-text">{{PHB_MEMO_MD}}</pre>
+          </details>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Rebuttal Addenda</div>
+        <div class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dilbert.png" alt="Dilbert rebuttal">
+          <pre class="memo-text">{{DILBERT_REBUTTAL_MD}}</pre>
+        </div>
+        <div class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Alice.png" alt="Alice rebuttal">
+          <pre class="memo-text">{{ALICE_REBUTTAL_MD}}</pre>
+        </div>
+        <div class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Wally.png" alt="Wally rebuttal">
+          <pre class="memo-text">{{WALLY_REBUTTAL_MD}}</pre>
+        </div>
+        <div class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dogbert.png" alt="Dogbert rebuttal">
+          <pre class="memo-text">{{DOGBERT_REBUTTAL_MD}}</pre>
+        </div>
+        <div class="memo-card">
+          <img class="memo-avatar" src="{{IMAGE_BASE}}/PHB.png" alt="PHB rebuttal">
+          <pre class="memo-text">{{PHB_REBUTTAL_MD}}</pre>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Sources</div>
+        <ul class="mono">{{SOURCES_HTML}}</ul>
+      </section>
+    </article>
+    <div class="footer-note">{{FOOTER_NOTE}}</div>
+  </main>
+
+  <script>
+    (function () {
+      const ratingClass = {
+        yellow: "rating-yellow",
+        red: "rating-red",
+        green: "rating-green"
+      };
+
+      function escapeHtml(value) {
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function renderInline(markdown) {
+        let html = escapeHtml(markdown);
+        html = html.replace(/\*\*(Yellow|Red|Green)\*\*/gi, function (_, color) {
+          const lower = color.toLowerCase();
+          return "<strong class=\"" + ratingClass[lower] + "\">" + color + "</strong>";
+        });
+        html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        return html;
+      }
+
+      function markdownToHtml(text) {
+        const lines = text.replace(/\r\n/g, "\n").split("\n");
+        let html = "";
+        let inList = false;
+
+        function closeList() {
+          if (inList) {
+            html += "</ul>";
+            inList = false;
+          }
+        }
+
+        lines.forEach(function (rawLine) {
+          const line = rawLine.trimEnd();
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            closeList();
+            return;
+          }
+
+          const heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
+          if (heading) {
+            closeList();
+            const level = Math.min(6, heading[1].length + 2);
+            html += "<h" + level + ">" + renderInline(heading[2]) + "</h" + level + ">";
+            return;
+          }
+
+          const numbered = trimmed.match(/^(\d+)\)\s+(.*)$/);
+          if (numbered) {
+            closeList();
+            html += "<p><strong>" + numbered[1] + ")</strong> " + renderInline(numbered[2]) + "</p>";
+            return;
+          }
+
+          const bullet = trimmed.match(/^-\s+(.*)$/);
+          if (bullet) {
+            if (!inList) {
+              html += "<ul>";
+              inList = true;
+            }
+            html += "<li>" + renderInline(bullet[1]) + "</li>";
+            return;
+          }
+
+          closeList();
+          html += "<p>" + renderInline(trimmed) + "</p>";
+        });
+
+        closeList();
+        return html;
+      }
+
+      function colorizeStrongRatings(root) {
+        root.querySelectorAll("strong").forEach(function (el) {
+          const key = el.textContent.trim().toLowerCase();
+          if (ratingClass[key]) {
+            el.classList.add(ratingClass[key]);
+          }
+        });
+      }
+
+      document.querySelectorAll("pre.memo-text").forEach(function (pre) {
+        const div = document.createElement("div");
+        div.className = "memo-text markdown-view";
+        div.innerHTML = markdownToHtml(pre.textContent || "");
+        pre.replaceWith(div);
+        colorizeStrongRatings(div);
+      });
+
+      colorizeStrongRatings(document);
+    })();
+  </script>
+</body>
+</html>

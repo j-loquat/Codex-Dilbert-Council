@@ -96,6 +96,30 @@ The council report is structured to maximize usefulness:
 - decision gates (`go` / `hold` / `kill`)
 - appendix with full individual memos
 
+## HTML Report Export (Optional)
+
+After generating the council report, the skill can optionally create a styled local HTML report.
+
+- Output file (current working directory): `dilbert_council_report.html`
+- Template source: `.codex/skills/dilbert-council/assets/templates/dilbert-council-report-template.html`
+- Image assets used by the template:
+  - `.codex/skills/dilbert-council/assets/images/dilbert-logo-small.png`
+  - `.codex/skills/dilbert-council/assets/images/Dilbert.png`
+  - `.codex/skills/dilbert-council/assets/images/Alice.png`
+  - `.codex/skills/dilbert-council/assets/images/Wally.png`
+  - `.codex/skills/dilbert-council/assets/images/Dogbert.png`
+  - `.codex/skills/dilbert-council/assets/images/PHB.png`
+
+The export preserves the report look-and-feel and readability details:
+
+- Manila-folder visual style and report layout
+- Character image sizing (appendix/rebuttal avatars at 50%)
+- Character image icons in the contrast matrix
+- Markdown-to-HTML rendering for appendix memos/rebuttals (`#` headings, `**bold**`, bullets)
+- Color-coded risk labels (`Green`, `Yellow`, `Red`) via CSS classes
+
+Preview reference: [council-report-snip.png](council-report-snip.png)
+
 ## Customization
 
 Adjust character behavior in:
