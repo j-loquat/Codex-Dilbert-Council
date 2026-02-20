@@ -118,7 +118,7 @@ The export preserves the report look-and-feel and readability details:
 - Markdown-to-HTML rendering for appendix memos/rebuttals (`#` headings, `**bold**`, bullets)
 - Color-coded risk labels (`Green`, `Yellow`, `Red`) via CSS classes
 
-Preview reference: [council-report-snip.png](council-report-snip.png)
+Preview reference: ![council-report-snip.png](council-report-snip.png)
 
 ## Customization
 
