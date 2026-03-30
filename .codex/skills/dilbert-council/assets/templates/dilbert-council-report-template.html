@@ -55,7 +55,7 @@
       position: absolute;
       top: -30px;
       left: 50px;
-      width: 270px;
+      width: 320px;
       height: 40px;
       background: var(--manilla-base);
       clip-path: polygon(0% 100%, 15% 0%, 85% 0%, 100% 100%);
@@ -189,12 +189,12 @@
       margin-bottom: 8px;
     }
     li::before {
-      content: "▪";
+      content: "■";
       position: absolute;
       left: 0;
       top: 0;
       color: var(--red);
-      font-size: 0.9em;
+      font-size: 0.75em;
     }
     table {
       width: 100%;
@@ -347,6 +347,7 @@
         <div class="tag">Traffic Light: <strong class="{{TRAFFIC_LIGHT_CLASS}}">{{TRAFFIC_LIGHT_TEXT}}</strong></div>
         <div class="tag">Confidence: {{CONFIDENCE}}</div>
         <div class="tag">Maturity: {{MATURITY_LEVEL}}</div>
+        <div class="tag">Stakes: {{STAKES_LEVEL}}</div>
         <div class="tag">Directive: {{DIRECTIVE}}</div>
       </section>
 
@@ -356,6 +357,56 @@
           <ul>{{IDEA_SNAPSHOT_LEFT_HTML}}</ul>
           <ul>{{IDEA_SNAPSHOT_RIGHT_HTML}}</ul>
         </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Council Read</div>
+        <p class="mono">{{COUNCIL_READ_HTML}}</p>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Memorable Lines</div>
+        <ul class="mono">{{MEMORABLE_LINES_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Weighted Scorecard</div>
+        <table class="mono">
+          <thead>
+            <tr>
+              <th>Criterion</th>
+              <th>Weight</th>
+              <th>Score</th>
+              <th>Why</th>
+            </tr>
+          </thead>
+          <tbody>{{SCORECARD_ROWS_HTML}}</tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Evidence Snapshot</div>
+        <div class="two-col mono">
+          <ul>{{EVIDENCE_FACTS_HTML}}</ul>
+          <ul>{{EVIDENCE_UNCERTAINTIES_HTML}}</ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Claim Ledger</div>
+        <table class="mono">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Type</th>
+              <th>Confidence</th>
+              <th>Claim</th>
+              <th>Source / Test</th>
+              <th>Why It Matters</th>
+            </tr>
+          </thead>
+          <tbody>{{CLAIM_LEDGER_ROWS_HTML}}</tbody>
+        </table>
       </section>
 
       <section class="section">
@@ -425,66 +476,13 @@
       </section>
 
       <section class="section">
-        <div class="section-label">Appendix: Individual Memos</div>
-        <article class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dilbert.png" alt="Dilbert">
-          <details open>
-            <summary>Dilbert - Primary Memo</summary>
-            <pre class="memo-text">{{DILBERT_MEMO_MD}}</pre>
-          </details>
-        </article>
-        <article class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Alice.png" alt="Alice">
-          <details>
-            <summary>Alice - Primary Memo</summary>
-            <pre class="memo-text">{{ALICE_MEMO_MD}}</pre>
-          </details>
-        </article>
-        <article class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Wally.png" alt="Wally">
-          <details>
-            <summary>Wally - Primary Memo</summary>
-            <pre class="memo-text">{{WALLY_MEMO_MD}}</pre>
-          </details>
-        </article>
-        <article class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dogbert.png" alt="Dogbert">
-          <details>
-            <summary>Dogbert - Primary Memo</summary>
-            <pre class="memo-text">{{DOGBERT_MEMO_MD}}</pre>
-          </details>
-        </article>
-        <article class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/PHB.png" alt="PHB">
-          <details>
-            <summary>PHB - Primary Memo</summary>
-            <pre class="memo-text">{{PHB_MEMO_MD}}</pre>
-          </details>
-        </article>
+        <div class="section-label">Cross-Examination</div>
+        {{CROSS_EXAM_HTML}}
       </section>
 
       <section class="section">
-        <div class="section-label">Rebuttal Addenda</div>
-        <div class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dilbert.png" alt="Dilbert rebuttal">
-          <pre class="memo-text">{{DILBERT_REBUTTAL_MD}}</pre>
-        </div>
-        <div class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Alice.png" alt="Alice rebuttal">
-          <pre class="memo-text">{{ALICE_REBUTTAL_MD}}</pre>
-        </div>
-        <div class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Wally.png" alt="Wally rebuttal">
-          <pre class="memo-text">{{WALLY_REBUTTAL_MD}}</pre>
-        </div>
-        <div class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/Dogbert.png" alt="Dogbert rebuttal">
-          <pre class="memo-text">{{DOGBERT_REBUTTAL_MD}}</pre>
-        </div>
-        <div class="memo-card">
-          <img class="memo-avatar" src="{{IMAGE_BASE}}/PHB.png" alt="PHB rebuttal">
-          <pre class="memo-text">{{PHB_REBUTTAL_MD}}</pre>
-        </div>
+        <div class="section-label">Appendix: Individual Memos</div>
+        {{MEMO_CARDS_HTML}}
       </section>
 
       <section class="section">
@@ -552,10 +550,10 @@
             return;
           }
 
-          const numbered = trimmed.match(/^(\d+)\)\s+(.*)$/);
+          const numbered = trimmed.match(/^(\d+)[\.\)]\s+(.*)$/);
           if (numbered) {
             closeList();
-            html += "<p><strong>" + numbered[1] + ")</strong> " + renderInline(numbered[2]) + "</p>";
+            html += "<p><strong>" + numbered[1] + ".</strong> " + renderInline(numbered[2]) + "</p>";
             return;
           }
 
