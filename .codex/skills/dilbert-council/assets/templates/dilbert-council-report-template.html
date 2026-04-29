@@ -309,6 +309,13 @@
       padding: 1px 4px;
       font-size: 0.78rem;
     }
+    a {
+      color: #075985;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+      overflow-wrap: anywhere;
+    }
     @media (max-width: 940px) {
       .folder-container { padding: 46px 14px 20px; }
       .sheet { padding: 24px 14px; }
@@ -401,12 +408,43 @@
               <th>Type</th>
               <th>Confidence</th>
               <th>Claim</th>
-              <th>Source / Test</th>
+              <th>Evidence / Counterevidence</th>
+              <th>Owner / Impact</th>
+              <th>Test / Staleness</th>
               <th>Why It Matters</th>
             </tr>
           </thead>
           <tbody>{{CLAIM_LEDGER_ROWS_HTML}}</tbody>
         </table>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Fact / Inference / Unknown</div>
+        <ul class="mono">{{FACT_INFERENCE_UNKNOWN_HTML}}</ul>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Availability Matrix</div>
+        <table class="mono">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Plan / Account</th>
+              <th>Platform</th>
+              <th>Region</th>
+              <th>Status</th>
+              <th>Source</th>
+              <th>Confidence</th>
+              <th>Decision Implication</th>
+            </tr>
+          </thead>
+          <tbody>{{AVAILABILITY_MATRIX_ROWS_HTML}}</tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Source Hierarchy</div>
+        <ul class="mono">{{SOURCE_HIERARCHY_HTML}}</ul>
       </section>
 
       <section class="section">
@@ -458,6 +496,11 @@
       </section>
 
       <section class="section">
+        <div class="section-label">Test Plan</div>
+        <ul class="mono">{{TEST_PLAN_HTML}}</ul>
+      </section>
+
+      <section class="section">
         <div class="section-label">30-Day De-Risk Plan</div>
         <ul class="mono">{{NEXT_30_DAYS_HTML}}</ul>
       </section>
@@ -468,6 +511,11 @@
           <ul>{{DECISION_GATES_LEFT_HTML}}</ul>
           <ul>{{DECISION_GATES_RIGHT_HTML}}</ul>
         </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Verdict Sensitivity</div>
+        <ul class="mono">{{VERDICT_SENSITIVITY_HTML}}</ul>
       </section>
 
       <section class="section">

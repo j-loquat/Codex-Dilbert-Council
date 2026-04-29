@@ -94,6 +94,12 @@ For each criterion, assign:
 - What success looks like
 - What failure looks like
 
+When reviewing research reports, market briefs, AI products, model launches, tools, or platforms, strongly consider adding:
+- Source hierarchy and market interpretation discipline
+- Fact/inference separation
+- Missing evidence and falsifiability
+- Workflow or adoption proof
+
 ## Step 3: Build The Evidence Packet And Claim Ledger
 Decide whether web research is needed.
 
@@ -119,15 +125,59 @@ If research is needed:
 4. List open uncertainties explicitly.
 5. Centralize the facts once and pass the same packet to every visible agent.
 
+### Source Hierarchy
+For research-heavy runs, assign each source to a strength tier before building claims.
+
+Default hierarchy:
+- Official / primary source: supports product facts, dates, pricing, availability, policy, legal, security, and model-capability claims.
+- Technical docs / API docs: supports implementation details, limits, compatibility, and operational constraints.
+- Reputable third-party reporting: supports market framing, external interpretation, competitive narrative, and reported stakeholder reaction.
+- Social/search/community samples: supports sentiment examples only unless sampled with a stated method and count.
+- Generic company, cloud, or marketing pages: supports broad positioning only; do not use these alone for governance readiness, enterprise adoption, security controls, or compliance claims.
+
+Rules:
+- Do not let third-party framing become internal intent unless a primary source supports it.
+- Do not let launch cadence become adoption evidence.
+- Do not let distribution availability become enterprise readiness unless controls, auditability, identity, data boundaries, procurement path, and admin policy are specifically sourced.
+- Model benchmarks support capability claims, not workflow productivity claims. Workflow productivity requires task-level tests against a baseline.
+
+### Fact / Inference / Unknown Split
+For research-report critiques, market briefs, and AI product/tool reviews, create a compact `Fact / Inference / Unknown` table before synthesis.
+
+Include:
+- Facts: directly supported by primary or high-quality sources.
+- Inferences: plausible interpretations that combine facts.
+- Unknowns: claims that need new evidence or a test.
+
+Every strategic thesis should land in exactly one of these buckets. If it cannot be placed cleanly, split it into smaller claims.
+
+### Availability Matrix
+For AI products, models, tools, APIs, or platforms, create an availability matrix when availability affects the verdict.
+
+Include:
+- Feature or capability
+- Plan or account requirement
+- Platform or environment
+- Region or rollout caveat
+- Preview / alpha / beta / GA status
+- Source
+- Confidence
+- Decision implication
+
+Use the matrix to stop preview-only or platform-limited capabilities from being treated as universally available.
+
 ### Claim Ledger
 Create 6 to 12 claims maximum. Use this format:
 
-`CL-01 | fact / inference / assumption / unknown | confidence | claim | source or test needed | why it matters`
+`CL-01 | fact / inference / assumption / unknown | confidence 0.00-1.00 | claim | evidence refs | counterevidence refs | owner | decision impact | expires or stale when | test needed | why it matters`
 
 Rules:
 - Every major recommendation in the synthesis must cite claim IDs or say `judgment call`.
 - If two claims conflict, mark the conflict explicitly instead of collapsing them.
 - If evidence is missing, write the test needed to resolve it.
+- Give each claim an `owner` persona so cross-examination has a concrete target.
+- Use `decision impact` to say which part of the verdict changes if the claim is false.
+- Use `expires or stale when` for time-sensitive claims, market facts, pricing, model capabilities, regulations, and competitor comparisons.
 - In the final report, reference claims by short description first. Example: `Trust is the main blocker (CL-01)`, not just `CL-01`.
 
 Use `scribe` when the evidence is messy, conflicting, or high stakes.
@@ -147,6 +197,20 @@ Use `arbiter` when:
 - the run is `deep-dive`
 - stakes are `high`
 - council members disagree materially
+
+## Step 4.5: Model Routing And Persona Injection
+Treat `dilbert`, `alice`, `wally`, `dogbert`, `phb`, `scribe`, and `arbiter` as council personas, not necessarily as fixed runtime agent role names.
+
+Default routing:
+- `quick-roast`: run locally unless parallelism clearly helps. If spawning, use a fast current model and inject the persona prompt manually.
+- `standard`: use GPT-5.5-family models for visible council personas and synthesis when available.
+- `deep-dive` or `high` stakes: use GPT-5.5 with high or extra-high reasoning for visible council personas, `scribe`, and `arbiter` when available.
+
+Runtime rule:
+- If named runtime roles are pinned to older model families, do not use those roles for a run that needs GPT-5.5 quality.
+- Instead, spawn default agents with explicit GPT-5.5-family model routing and inject the relevant character fingerprint, ownership boundary, and output template into each prompt.
+- Keep the reader-facing council names exactly `dilbert`, `alice`, `wally`, `dogbert`, and `phb` even when the underlying spawned agent type is `default`.
+- Record the model family used in `meta.model_routing` when producing JSON or HTML artifacts.
 
 ## Step 5: Spawn The Visible Council
 Spawn exactly:
@@ -184,6 +248,29 @@ Make the humor character-specific. If another council member could say the same 
 Follow your output template exactly.
 """
 
+### Visible-agent memo template
+Every visible agent must return this shape. The final report can preserve the memo verbatim, but synthesis should extract only the decision-useful parts.
+
+```markdown
+## <Character>
+
+- Stance: Green / Yellow / Red
+- One-sentence verdict: <direct answer in character>
+- Strongest objection: <the biggest failure mode in this character's lane>
+- Evidence-backed claims:
+  - <plain-English claim summary> (<CL-ID>) - <why it changes the decision>
+- Assumptions and unknowns:
+  - <assumption or unknown> - <test or evidence needed>
+- Falsification or rescue test: <what would prove this concern wrong or salvage the plan>
+- Recommended gate: <go / hold / kill condition owned by this character>
+- One memorable line: <one short line that sharpens the analysis>
+```
+
+Rules:
+- `Evidence-backed claims` should cite existing claim IDs. If the memo needs a new claim, mark it `proposed new claim` and explain the evidence or test needed.
+- `One memorable line` is optional when the character has no useful joke. Empty humor is worse than no humor.
+- The `Recommended gate` must be measurable enough for the `arbiter` to use in final decision gates.
+
 Length guidance by maturity:
 - `seed`: 180 to 280 words per agent.
 - `brief`: 250 to 380 words per agent.
@@ -210,7 +297,11 @@ Before writing the human-facing report, assemble an internal object that matches
 
 This object must capture:
 - Subject title and subject slug
+- Model routing and run mode
 - Decision brief
+- Source hierarchy
+- Fact / inference / unknown split when applicable
+- Availability matrix when applicable
 - Council read
 - Memorable lines
 - Weighted scorecard
@@ -232,6 +323,14 @@ If the user asks for files or wants HTML export:
 3. Render `<subject-slug>-dilbert-council-report.html` from that JSON with `scripts/render_dilbert_council_report.py`.
 
 Use `arbiter` to tighten the scorecard and verdict before finalizing when the run is deep or contentious.
+
+### Arbiter final calibration pass
+For `deep-dive`, `high` stakes, or contentious `standard` runs, the arbiter must produce:
+- Surviving claims: which claim IDs remain strong after cross-examination.
+- Weakened claims: which claim IDs were downgraded and why.
+- Verdict sensitivity: the 1 to 3 assumptions that would flip the traffic light.
+- Confidence adjustment: whether confidence moved up, down, or stayed the same.
+- Final gate check: whether `go_if`, `hold_if`, and `kill_if` are measurable.
 
 ## Step 8: Produce The Council Report
 Use this structure.
@@ -266,6 +365,17 @@ Show each criterion, weight, score, and one-line rationale.
 ## Claim Ledger
 Show the most decision-relevant claims in compact form with plain-English summaries plus claim IDs.
 
+## Fact / Inference / Unknown
+Include for research-report critiques, market briefs, and AI product/tool reviews.
+Use a compact table or grouped bullets.
+
+## Availability Matrix
+Include for AI products, tools, APIs, models, and platforms when plan, platform, region, preview status, or access limits affect the verdict.
+
+## Source Hierarchy
+Include for research-heavy runs.
+Show which source classes support facts versus framing versus sentiment.
+
 ## Overall Verdict
 - Traffic light: Green / Yellow / Red
 - Confidence: Low / Medium / High
@@ -297,6 +407,14 @@ Call out tempting but damaging moves.
 ## 7-Day Minimum Viable Next Step
 Concrete experiment with owner, scope, and success or fail threshold.
 
+When the verdict is Yellow because workflow value is unproven, include a test plan with:
+- Benchmark tasks
+- Baseline comparison
+- Metrics
+- Pass threshold
+- Fail threshold
+- Cleanup or manual-rescue limits
+
 ## 30-Day De-Risk Plan
 Include only for `plan` maturity or high-stakes runs.
 
@@ -304,6 +422,12 @@ Include only for `plan` maturity or high-stakes runs.
 - Go if:
 - Hold if:
 - Kill if:
+
+## Verdict Sensitivity
+Include for `deep-dive`, high-stakes, or contentious runs.
+- What would flip this verdict greener.
+- What would flip this verdict redder.
+- Which unknown deserves the next test.
 
 ## Questions For The User
 Max 7. Only high-leverage questions.

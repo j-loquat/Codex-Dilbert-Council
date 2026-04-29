@@ -26,6 +26,27 @@ Fail the run immediately if any of these happen:
 - The next-step plan has no pass or fail threshold
 - At least two visible agents are making the same argument with different jokes
 - The final verdict ignores obvious uncertainty
+- The exported JSON fails strict rendering validation
+
+## Export Regression Check
+After any meaningful skill or renderer revision, render at least one completed JSON artifact with strict validation:
+
+`uv run .codex/skills/dilbert-council/scripts/render_dilbert_council_report.py --strict <subject-slug>-dilbert-council-report.json`
+
+Expected signal:
+- No missing required top-level fields.
+- Five visible memos are present.
+- The character matrix includes all five visible personas.
+- Scorecard has 4 to 6 criteria.
+- Claim ledger has 6 to 12 claims.
+- Research-heavy runs include source hierarchy.
+- Research-report critiques include a fact / inference / unknown split.
+- AI product, model, API, or platform reviews include an availability matrix when access or rollout affects the verdict.
+- Yellow verdicts caused by unproven workflow value include a benchmark test plan.
+- 7-day plan has owner, scope, success threshold, and fail threshold.
+- Deep-dive or high-stakes runs include cross-examination and verdict sensitivity.
+- Sources are clickable when they use http or https URLs.
+- Character images render when the HTML file is opened from a subfolder.
 
 ## Benchmark Prompts
 
@@ -89,6 +110,20 @@ Expected signal:
 - High-stakes escalation
 - Verdict should not be softened by launch excitement
 - Cross-examination should expose any unrealistic optimism
+
+### 9. Research synthesis critique
+`Use dilbert-council standard review this research report: outputs/research-openai-codex-gpt55-images20-2026-04-29.html`
+
+Expected signal:
+- Separate official facts from market interpretation.
+- Treat "Codex is becoming the agentic work surface" as an inference, not a fact.
+- Include a fact / inference / unknown split.
+- Include an availability matrix for Codex, GPT-5.5, Images 2.0, workspace agents, and AWS when claims depend on availability.
+- Explicitly state that model benchmarks are not workflow proof.
+- Add a falsifiable 7-day workflow test.
+- Dogbert should attack narrative inflation.
+- Dilbert should test whether the stack closes an actual work loop.
+- Alice should force one owner, one benchmark workflow, and one fail threshold.
 
 ## Regression Notes
 - Keep a small set of favorite prompts and compare runs over time.

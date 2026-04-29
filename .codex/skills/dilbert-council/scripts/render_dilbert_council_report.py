@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, TypedDict
@@ -29,6 +30,7 @@ class Meta(TypedDict, total=False):
     footer_note: str
     report_title_line_1: str
     report_title_line_2: str
+    model_routing: dict[str, Any]
 
 
 class ScorecardEntry(TypedDict, total=False):
@@ -41,8 +43,15 @@ class ScorecardEntry(TypedDict, total=False):
 class ClaimLedgerEntry(TypedDict, total=False):
     id: str
     type: str
+    kind: str
     confidence: str
     claim: str
+    evidence_refs: list[str]
+    counterevidence_refs: list[str]
+    owner: str
+    decision_impact: str
+    expires_or_stale_when: str
+    test_needed: str
     source_or_test: str
     why_it_matters: str
 
@@ -76,6 +85,17 @@ class SourceEntry(TypedDict, total=False):
     used_for: str
 
 
+class AvailabilityEntry(TypedDict, total=False):
+    feature: str
+    plan_or_account: str
+    platform: str
+    region: str
+    status: str
+    source: str
+    confidence: str
+    decision_implication: str
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
@@ -99,8 +119,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--image-base",
-        default=".codex/skills/dilbert-council/assets/images",
-        help="Image base path used in the rendered HTML.",
+        help=(
+            "Image base path used in the rendered HTML. Defaults to a path "
+            "relative from the output HTML to the skill image assets."
+        ),
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Validate the council contract and fail on missing quality-critical fields.",
     )
     return parser.parse_args()
 
@@ -111,6 +138,151 @@ def read_json(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("Top-level JSON value must be an object.")
     return data
+
+
+def default_image_base_for_output(output_path: Path) -> str:
+    """Return an HTML-friendly image path relative to the output file."""
+    image_dir = Path(__file__).resolve().parent.parent / "assets" / "images"
+    start_dir = output_path.resolve().parent
+    relative = os.path.relpath(image_dir, start=start_dir)
+    return relative.replace(os.sep, "/")
+
+
+def is_non_empty(value: Any) -> bool:
+    """Return True when a value is meaningfully present."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def has_keys(mapping: Any, keys: list[str]) -> bool:
+    """Return True when a mapping has non-empty values for all keys."""
+    if not isinstance(mapping, dict):
+        return False
+    return all(is_non_empty(mapping.get(key)) for key in keys)
+
+
+def validate_strict_contract(data: dict[str, Any]) -> None:
+    """Validate quality-critical fields for final council exports."""
+    errors: list[str] = []
+    required_top_level = [
+        "meta",
+        "idea_snapshot",
+        "council_read",
+        "memorable_lines",
+        "scorecard",
+        "evidence_snapshot",
+        "claim_ledger",
+        "verdict_sensitivity",
+        "overall_verdict",
+        "character_matrix",
+        "consensus",
+        "disagreements",
+        "top_risks",
+        "what_not_to_do",
+        "next_7_days",
+        "decision_gates",
+        "questions_for_user",
+        "memos",
+        "cross_examination",
+        "sources",
+    ]
+    for key in required_top_level:
+        if key not in data:
+            errors.append(f"Missing top-level key: {key}")
+
+    meta = data.get("meta", {})
+    if not has_keys(meta, ["subject_title", "subject_slug", "topic", "mode", "generated_at"]):
+        errors.append("meta must include subject_title, subject_slug, topic, mode, and generated_at")
+    if not isinstance(meta.get("model_routing"), dict) or not meta.get("model_routing"):
+        errors.append("meta.model_routing must record the model family/route used")
+
+    idea_snapshot = data.get("idea_snapshot", {})
+    if not has_keys(
+        idea_snapshot,
+        [
+            "problem",
+            "proposal",
+            "beneficiary",
+            "success_signal",
+            "decision_requested",
+            "reversibility",
+            "time_horizon",
+            "maturity_level",
+            "stakes_level",
+        ],
+    ):
+        errors.append("idea_snapshot is missing one or more decision-brief fields")
+
+    scorecard = ensure_list(data.get("scorecard"))
+    if not 4 <= len(scorecard) <= 6:
+        errors.append("scorecard must contain 4 to 6 weighted criteria")
+    for index, entry in enumerate(scorecard, start=1):
+        if not has_keys(entry, ["criterion", "weight", "score", "why"]):
+            errors.append(f"scorecard[{index}] must include criterion, weight, score, and why")
+
+    claim_ledger = ensure_list(data.get("claim_ledger"))
+    if not 6 <= len(claim_ledger) <= 12:
+        errors.append("claim_ledger must contain 6 to 12 claims")
+    for index, entry in enumerate(claim_ledger, start=1):
+        if not has_keys(entry, ["id", "confidence", "claim", "why_it_matters"]):
+            errors.append(
+                f"claim_ledger[{index}] must include id, confidence, claim, and why_it_matters"
+            )
+        if not is_non_empty(entry.get("type")) and not is_non_empty(entry.get("kind")):
+            errors.append(f"claim_ledger[{index}] must include type or kind")
+        if not is_non_empty(entry.get("source_or_test")) and not is_non_empty(
+            entry.get("test_needed")
+        ):
+            errors.append(f"claim_ledger[{index}] must include source_or_test or test_needed")
+
+    overall_verdict = data.get("overall_verdict", {})
+    if not has_keys(overall_verdict, ["traffic_light", "confidence", "summary"]):
+        errors.append("overall_verdict must include traffic_light, confidence, and summary")
+
+    persona_keys = ["dilbert", "alice", "wally", "dogbert", "phb"]
+    memos = data.get("memos", {})
+    if not isinstance(memos, dict):
+        errors.append("memos must be an object keyed by visible council persona")
+    else:
+        for key in persona_keys:
+            if not is_non_empty(memos.get(key)):
+                errors.append(f"memos.{key} is required and must not be empty")
+
+    matrix_characters = {
+        str(entry.get("character", "")).strip().lower()
+        for entry in ensure_list(data.get("character_matrix"))
+        if isinstance(entry, dict)
+    }
+    for key in persona_keys:
+        if key not in matrix_characters:
+            errors.append(f"character_matrix must include {key}")
+
+    next_7_days = data.get("next_7_days", {})
+    if not has_keys(next_7_days, ["owner", "scope", "success_threshold", "fail_threshold"]):
+        errors.append("next_7_days must include owner, scope, success_threshold, and fail_threshold")
+
+    gates = data.get("decision_gates", {})
+    if not has_keys(gates, ["go_if", "hold_if", "kill_if"]):
+        errors.append("decision_gates must include go_if, hold_if, and kill_if")
+
+    mode = str(meta.get("mode", "")).strip().lower()
+    stakes = str(
+        meta.get("stakes_level", idea_snapshot.get("stakes_level", ""))
+    ).strip().lower()
+    if mode == "deep-dive" or stakes == "high":
+        if not ensure_list(data.get("cross_examination")):
+            errors.append("deep-dive and high-stakes runs require cross_examination")
+        if not is_non_empty(data.get("verdict_sensitivity")):
+            errors.append("deep-dive and high-stakes runs require verdict_sensitivity")
+
+    if errors:
+        joined = "\n- ".join(errors)
+        raise ValueError(f"Strict council contract validation failed:\n- {joined}")
 
 
 def slugify_subject(value: str) -> str:
@@ -208,21 +380,161 @@ def render_scorecard(entries: list[ScorecardEntry]) -> str:
     return "".join(rows)
 
 
-def render_claim_ledger(entries: list[ClaimLedgerEntry]) -> str:
-    """Render claim-ledger rows."""
+def render_fact_inference_unknown(value: Any) -> str:
+    """Render grouped fact/inference/unknown lists."""
+    if not isinstance(value, dict):
+        return render_list_items(ensure_list(value))
+
+    def format_entry(item: Any) -> str:
+        if not isinstance(item, dict):
+            return str(item)
+        parts: list[str] = []
+        item_id = str(item.get("id", "")).strip()
+        statement = str(item.get("statement", item.get("claim", ""))).strip()
+        if item_id and statement:
+            parts.append(f"{item_id}: {statement}")
+        elif statement:
+            parts.append(statement)
+        refs = ", ".join(str(ref) for ref in ensure_list(item.get("refs")))
+        if refs:
+            parts.append(f"refs: {refs}")
+        confidence = str(item.get("confidence", "")).strip()
+        if confidence:
+            parts.append(f"confidence: {confidence}")
+        caveat = str(item.get("caveat", "")).strip()
+        if caveat:
+            parts.append(f"caveat: {caveat}")
+        resolve_by = str(item.get("resolve_by", "")).strip()
+        if resolve_by:
+            parts.append(f"resolve by: {resolve_by}")
+        return " | ".join(parts)
+
+    rows: list[str] = []
+    labels = [
+        ("Facts", "facts"),
+        ("Inferences", "inferences"),
+        ("Unknowns", "unknowns"),
+    ]
+    for label, key in labels:
+        items = ensure_list(value.get(key))
+        if not items:
+            continue
+        joined = "; ".join(
+            format_entry(item) for item in items if str(item).strip()
+        )
+        if joined:
+            rows.append(f"<li><strong>{escape(label)}:</strong> {escape(joined)}</li>")
+    return "".join(rows) if rows else "<li>None supplied.</li>"
+
+
+def render_availability_matrix(entries: list[AvailabilityEntry]) -> str:
+    """Render availability rows."""
     if not entries:
         return (
-            "<tr><td colspan=\"6\">No claim ledger supplied. Add shared claims before exporting.</td></tr>"
+            "<tr><td colspan=\"8\">No availability matrix supplied.</td></tr>"
         )
     rows: list[str] = []
     for entry in entries:
         rows.append(
             "<tr>"
+            f"<td>{escape(entry.get('feature', ''))}</td>"
+            f"<td>{escape(entry.get('plan_or_account', ''))}</td>"
+            f"<td>{escape(entry.get('platform', ''))}</td>"
+            f"<td>{escape(entry.get('region', ''))}</td>"
+            f"<td>{escape(entry.get('status', ''))}</td>"
+            f"<td>{escape(entry.get('source', ''))}</td>"
+            f"<td>{escape(entry.get('confidence', ''))}</td>"
+            f"<td>{escape(entry.get('decision_implication', ''))}</td>"
+            "</tr>"
+        )
+    return "".join(rows)
+
+
+def render_source_hierarchy(value: Any) -> str:
+    """Render source hierarchy entries."""
+    entries = ensure_list(value)
+    if not entries:
+        return "<li>No source hierarchy supplied.</li>"
+    rows: list[str] = []
+    for entry in entries:
+        if isinstance(entry, dict):
+            tier = entry.get("tier", "Source tier")
+            supports_value = entry.get("supports", "")
+            supports = ", ".join(str(item) for item in ensure_list(supports_value))
+            examples = ", ".join(str(item) for item in ensure_list(entry.get("examples")))
+            limits = entry.get("limits", "")
+            detail_parts = [
+                part
+                for part in [
+                    f"supports: {supports}" if supports else "",
+                    f"examples: {examples}" if examples else "",
+                    f"limits: {limits}" if limits else "",
+                ]
+                if part
+            ]
+            rows.append(
+                f"<li><strong>{escape(tier)}:</strong> {escape(' | '.join(detail_parts))}</li>"
+            )
+        else:
+            rows.append(f"<li>{escape(entry)}</li>")
+    return "".join(rows)
+
+
+def render_test_plan(value: Any) -> str:
+    """Render benchmark/test-plan details."""
+    if not isinstance(value, dict):
+        return render_list_items(ensure_list(value))
+    items = [
+        ("Benchmark tasks", value.get("benchmark_tasks")),
+        ("Baseline", value.get("baseline")),
+        ("Metrics", value.get("metrics")),
+        ("Pass threshold", value.get("pass_threshold")),
+        ("Fail threshold", value.get("fail_threshold")),
+    ]
+    return render_key_value_list(items)
+
+
+def render_claim_ledger(entries: list[ClaimLedgerEntry]) -> str:
+    """Render claim-ledger rows."""
+    if not entries:
+        return (
+            "<tr><td colspan=\"8\">No claim ledger supplied. Add shared claims before exporting.</td></tr>"
+        )
+    rows: list[str] = []
+    for entry in entries:
+        evidence_parts = []
+        evidence_refs = ensure_list(entry.get("evidence_refs"))
+        counterevidence_refs = ensure_list(entry.get("counterevidence_refs"))
+        if evidence_refs:
+            evidence_parts.append(f"Evidence: {', '.join(str(item) for item in evidence_refs)}")
+        if counterevidence_refs:
+            evidence_parts.append(
+                f"Counter: {', '.join(str(item) for item in counterevidence_refs)}"
+            )
+        if entry.get("source_or_test"):
+            evidence_parts.append(str(entry.get("source_or_test", "")))
+
+        owner_impact_parts = []
+        if entry.get("owner"):
+            owner_impact_parts.append(f"Owner: {entry.get('owner')}")
+        if entry.get("decision_impact"):
+            owner_impact_parts.append(f"Impact: {entry.get('decision_impact')}")
+
+        test_parts = []
+        if entry.get("test_needed"):
+            test_parts.append(f"Test: {entry.get('test_needed')}")
+        if entry.get("expires_or_stale_when"):
+            test_parts.append(f"Stale when: {entry.get('expires_or_stale_when')}")
+
+        rows.append(
+            "<tr>"
             f"<td>{escape(entry.get('id', ''))}</td>"
-            f"<td>{escape(entry.get('type', ''))}</td>"
+            f"<td>{escape(entry.get('type', entry.get('kind', '')))}</td>"
             f"<td>{escape(entry.get('confidence', ''))}</td>"
             f"<td>{escape(entry.get('claim', ''))}</td>"
-            f"<td>{escape(entry.get('source_or_test', ''))}</td>"
+            f"<td>{escape(' | '.join(evidence_parts))}</td>"
+            f"<td>{escape(' | '.join(owner_impact_parts))}</td>"
+            f"<td>{escape(' | '.join(test_parts))}</td>"
             f"<td>{escape(entry.get('why_it_matters', ''))}</td>"
             "</tr>"
         )
@@ -388,12 +700,20 @@ def render_sources(entries: list[SourceEntry]) -> str:
     rows: list[str] = []
     for entry in entries:
         label = escape(entry.get("label", "Source"))
-        url_or_path = escape(entry.get("url_or_path", ""))
+        raw_url_or_path = str(entry.get("url_or_path", "")).strip()
+        url_or_path = escape(raw_url_or_path)
         used_for = escape(entry.get("used_for", ""))
-        if used_for:
-            rows.append(f"<li><code>{label}</code> - {url_or_path} - {used_for}</li>")
+        if raw_url_or_path.startswith(("http://", "https://")):
+            source_html = (
+                f"<a href=\"{url_or_path}\" target=\"_blank\" rel=\"noopener noreferrer\">"
+                f"{url_or_path}</a>"
+            )
         else:
-            rows.append(f"<li><code>{label}</code> - {url_or_path}</li>")
+            source_html = f"<span>{url_or_path}</span>"
+        if used_for:
+            rows.append(f"<li><code>{label}</code> - {source_html} - {used_for}</li>")
+        else:
+            rows.append(f"<li><code>{label}</code> - {source_html}</li>")
     return "".join(rows)
 
 
@@ -477,6 +797,15 @@ def render_html_report(data: dict[str, Any], template: str, image_base: str) -> 
         "CLAIM_LEDGER_ROWS_HTML": render_claim_ledger(
             ensure_list(data.get("claim_ledger"))
         ),
+        "FACT_INFERENCE_UNKNOWN_HTML": render_fact_inference_unknown(
+            data.get("fact_inference_unknown")
+        ),
+        "AVAILABILITY_MATRIX_ROWS_HTML": render_availability_matrix(
+            ensure_list(data.get("availability_matrix"))
+        ),
+        "SOURCE_HIERARCHY_HTML": render_source_hierarchy(
+            data.get("source_hierarchy")
+        ),
         "OVERALL_VERDICT_HTML": render_list_items(
             ensure_list(overall_verdict.get("summary"))
         ),
@@ -489,9 +818,13 @@ def render_html_report(data: dict[str, Any], template: str, image_base: str) -> 
         "TOP_RISKS_HTML": render_risks(ensure_list(data.get("top_risks"))),
         "WHAT_NOT_TO_DO_HTML": render_list_items(ensure_list(data.get("what_not_to_do"))),
         "NEXT_7_DAYS_HTML": render_next_7_days(data.get("next_7_days")),
+        "TEST_PLAN_HTML": render_test_plan(data.get("test_plan")),
         "NEXT_30_DAYS_HTML": render_list_items(ensure_list(data.get("next_30_days"))),
         "DECISION_GATES_LEFT_HTML": decision_gates_left,
         "DECISION_GATES_RIGHT_HTML": decision_gates_right,
+        "VERDICT_SENSITIVITY_HTML": render_list_items(
+            ensure_list(data.get("verdict_sensitivity"))
+        ),
         "QUESTIONS_HTML": render_list_items(ensure_list(data.get("questions_for_user"))),
         "CROSS_EXAM_HTML": render_cross_exam(
             ensure_list(data.get("cross_examination")), image_base
@@ -551,8 +884,11 @@ def main() -> int:
     data = read_json(args.input_json)
     template_path = args.template or default_template_path()
     output_path = args.output or default_output_path(args.input_json, data)
+    if args.strict:
+        validate_strict_contract(data)
+    image_base = args.image_base or default_image_base_for_output(output_path)
     template = template_path.read_text(encoding="utf-8")
-    rendered = render_html_report(data, template, args.image_base)
+    rendered = render_html_report(data, template, image_base)
     output_path.write_text(rendered, encoding="utf-8")
     print(f"Rendered {output_path}")
     return 0
